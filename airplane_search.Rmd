@@ -1,0 +1,56 @@
+---
+title: "Airplane Search"
+author: "Jeremy Harris"
+date: "October 19, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include = FALSE, warning=FALSE}
+library(rvest)
+library(dplyr)
+library(tidyverse)
+library(jsonlite)
+library(gt)
+```
+
+```{r, include = FALSE}
+#pull data for Cessna 180 from barnstormers (Cessna 180)
+lowPrice <- "50000"
+topPrice <- "150000"
+url <- paste0("https://www.barnstormers.com/cat_search.php?headline=&body=&part_num=&mfg=cessna&model=180&user__profile__company=&user__last_name=&user__first_name=&user__profile__country=&specialcase__state=&user__profile__city=&user__profile__uzip=&specialcase__phone=&user__email=&my_cats__name=&price__gte=",lowPrice,"&price__lte=",topPrice,"&search_type=advanced&keyword=")
+
+urlIn <- read_html(url)
+urlText <- urlIn %>% html_text()
+
+#read html data in as node and children to extract information
+web_body <- urlIn %>%
+  html_node("body") %>%
+  html_children()
+
+
+#pull out title, price & weblink
+airTitle <- html_nodes(web_body, '.listing_header') %>%
+  html_text()
+
+airPrice <- html_nodes(web_body, '.price') %>%
+  html_text()
+
+allLinks <- urlIn %>% html_nodes("a") %>% html_attr("href") #get all hyperlinks
+airLink <- allLinks[which(str_detect(allLinks, "classified"))] #get only links to classifieds (actual listings)
+airLinks <- paste0('https://barnstormers.com', airLink)
+
+#create dataframe of information
+airInfo = data.frame("Title" = airTitle, "Price" = airPrice, "Link" = airLinks)
+```
+
+```{r}
+airInfo %>% gt() %>%
+  tab_header(
+    title = md(paste0("Cessna 180 For Sale $",lowPrice," - $", topPrice)),
+    subtitle = md("Barnstormers.com")
+  )
+```
